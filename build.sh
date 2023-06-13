@@ -114,9 +114,14 @@ parsers=(
 mkdir -p languages
 cd languages
 
+git_clone(){
+  git clone $1 > /dev/null
+  echo "finish installing $1"
+}
+
 # clone parsers
 for language in "${parsers[@]}"; do
-  git clone $language > /dev/null; echo "finish installing $language" &
+  git_clone $language &
 done
 wait
 
