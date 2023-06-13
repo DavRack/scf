@@ -1,0 +1,121 @@
+[package]
+name = "scf"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+cc="*"
+
+[dependencies]
+cc = "1.0.79"
+clap = { version = "4.3.0", features = ["derive"] }
+colored = "2.0.0"
+regex = "1.8.4"
+tree-sitter = "0.20.10"
+# tree-sitter-gitignore = { path = "languages/tree-sitter-gitignore" }
+# tree-sitter-llvm-mir = { path = "languages/tree-sitter-llvm-mir" }
+# tree-sitter-markdown = { path = "languages/tree-sitter-markdown" }
+# tree-sitter-pascal = { path = "languages/tree-sitter-pascal" }
+# tree-sitter-rego = { path = "languages/tree-sitter-rego" }
+# tree-sitter-systemrdl = { path = "languages/tree-sitter-systemrdl" }
+# tree-sitter-apex = { path = "languages/tree-sitter-sfapex" }
+# tree-sitter-LALRPOP = { path = "languages/tree-sitter-lalrpop" }
+tree-sitter-agda = { path = "languages/tree-sitter-agda" }
+tree-sitter-bash = { path = "languages/tree-sitter-bash" }
+tree-sitter-beancount = { path = "languages/tree-sitter-beancount" }
+tree-sitter-c = { path = "languages/tree-sitter-c" }
+tree-sitter-c-sharp = { path = "languages/tree-sitter-c-sharp" }
+tree-sitter-capnp = { path = "languages/tree-sitter-capnp" }
+tree-sitter-clojure = { path = "languages/tree-sitter-clojure" }
+tree-sitter-cmake = { path = "languages/tree-sitter-cmake" }
+tree-sitter-comment = { path = "languages/tree-sitter-comment" }
+tree-sitter-commonlisp = { path = "languages/tree-sitter-commonlisp" }
+tree-sitter-cpp = { path = "languages/tree-sitter-cpp" }
+tree-sitter-css = { path = "languages/tree-sitter-css" }
+tree-sitter-cuda = { path = "languages/tree-sitter-cuda" }
+tree-sitter-d = { path = "languages/tree-sitter-d" }
+tree-sitter-dart = { path = "languages/tree-sitter-dart" }
+tree-sitter-dockerfile = { path = "languages/tree-sitter-dockerfile" }
+tree-sitter-dot = { path = "languages/tree-sitter-dot" }
+tree-sitter-elisp = { path = "languages/tree-sitter-elisp" }
+tree-sitter-elixir = { path = "languages/tree-sitter-elixir" }
+tree-sitter-elm = { path = "languages/tree-sitter-elm" }
+tree-sitter-embedded-template = { path = "languages/tree-sitter-embedded-template" }
+tree-sitter-eno = { path = "languages/tree-sitter-eno" }
+tree-sitter-erlang = { path = "languages/tree-sitter-erlang" }
+tree-sitter-fennel = { path = "languages/tree-sitter-fennel" }
+tree-sitter-fish = { path = "languages/tree-sitter-fish" }
+tree-sitter-formula = { path = "languages/tree-sitter-formula" }
+tree-sitter-fortran = { path = "languages/tree-sitter-fortran" }
+tree-sitter-gitattributes = { path = "languages/tree-sitter-gitattributes" }
+tree-sitter-gleam = { path = "languages/tree-sitter-gleam" }
+tree-sitter-glsl = { path = "languages/tree-sitter-glsl" }
+tree-sitter-go = { path = "languages/tree-sitter-go" }
+tree-sitter-gomod = { path = "languages/tree-sitter-go-mod" }
+tree-sitter-gowork = { path = "languages/tree-sitter-go-work" }
+tree-sitter-graphql = { path = "languages/tree-sitter-graphql" }
+tree-sitter-hack = { path = "languages/tree-sitter-hack" }
+tree-sitter-haskell = { path = "languages/tree-sitter-haskell" }
+tree-sitter-hcl = { path = "languages/tree-sitter-hcl" }
+tree-sitter-html = { path = "languages/tree-sitter-html" }
+tree-sitter-java = { path = "languages/tree-sitter-java" }
+tree-sitter-javascript = { path = "languages/tree-sitter-javascript" }
+tree-sitter-jq = { path = "languages/tree-sitter-jq" }
+tree-sitter-json = { path = "languages/tree-sitter-json" }
+tree-sitter-json5 = { path = "languages/tree-sitter-json5" }
+tree-sitter-julia = { path = "languages/tree-sitter-julia" }
+tree-sitter-kotlin = { path = "languages/tree-sitter-kotlin" }
+tree-sitter-latex = { path = "languages/tree-sitter-latex" }
+tree-sitter-lean = { path = "languages/tree-sitter-lean" }
+tree-sitter-llvm = { path = "languages/tree-sitter-llvm" }
+tree-sitter-lua = { path = "languages/tree-sitter-lua" }
+tree-sitter-m68k = { path = "languages/tree-sitter-m68k" }
+tree-sitter-make = { path = "languages/tree-sitter-make" }
+tree-sitter-meson = { path = "languages/tree-sitter-meson" }
+tree-sitter-nix = { path = "languages/tree-sitter-nix" }
+tree-sitter-objc = { path = "languages/tree-sitter-objc" }
+tree-sitter-ocaml = { path = "languages/tree-sitter-ocaml" }
+tree-sitter-org = { path = "languages/tree-sitter-org" }
+tree-sitter-perl = { path = "languages/tree-sitter-perl" }
+tree-sitter-pgn = { path = "languages/tree-sitter-pgn" }
+tree-sitter-php = { path = "languages/tree-sitter-php" }
+tree-sitter-pod = { path = "languages/tree-sitter-pod" }
+tree-sitter-proto = { path = "languages/tree-sitter-proto" }
+tree-sitter-python = { path = "languages/tree-sitter-python" }
+# tree-sitter-qmljs = { path = "languages/tree-sitter-qmljs" }
+tree-sitter-query = { path = "languages/tree-sitter-query" }
+tree-sitter-r = { path = "languages/tree-sitter-r" }
+tree-sitter-racket = { path = "languages/tree-sitter-racket" }
+tree-sitter-rasi = { path = "languages/tree-sitter-rasi" }
+tree-sitter-re2c = { path = "languages/tree-sitter-re2c" }
+tree-sitter-regex = { path = "languages/tree-sitter-regex" }
+tree-sitter-rst = { path = "languages/tree-sitter-rst" }
+tree-sitter-ruby = { path = "languages/tree-sitter-ruby" }
+tree-sitter-rust = { path = "languages/tree-sitter-rust" }
+tree-sitter-scala = { path = "languages/tree-sitter-scala" }
+tree-sitter-scheme = { path = "languages/tree-sitter-scheme" }
+tree-sitter-scss = { path = "languages/tree-sitter-scss" }
+tree-sitter-sexp = { path = "languages/tree-sitter-sexp" }
+tree-sitter-smali = { path = "languages/tree-sitter-smali" }
+tree-sitter-sourcepawn = { path = "languages/tree-sitter-sourcepawn" }
+tree-sitter-sparql = { path = "languages/tree-sitter-sparql" }
+tree-sitter-sql = { path = "languages/tree-sitter-sql" }
+tree-sitter-sql-bigquery = { path = "languages/tree-sitter-sql-bigquery" }
+tree-sitter-sqlite = { path = "languages/tree-sitter-sqlite" }
+tree-sitter-ssh-client-config = { path = "languages/tree-sitter-ssh-client-config" }
+tree-sitter-svelte = { path = "languages/tree-sitter-svelte" }
+# tree-sitter-swift = { path = "languages/tree-sitter-swift" }
+tree-sitter-tablegen = { path = "languages/tree-sitter-tablegen" }
+tree-sitter-thrift = { path = "languages/tree-sitter-thrift" }
+tree-sitter-turtle = { path = "languages/tree-sitter-turtle" }
+tree-sitter-twig = { path = "languages/tree-sitter-twig" }
+tree-sitter-typescript = { path = "languages/tree-sitter-typescript" }
+tree-sitter-verilog = { path = "languages/tree-sitter-verilog" }
+tree-sitter-vhdl = { path = "languages/tree-sitter-vhdl" }
+tree-sitter-vue = { path = "languages/tree-sitter-vue" }
+tree-sitter-wgsl = { path = "languages/tree-sitter-wgsl" }
+tree-sitter-yaml = { path = "languages/tree-sitter-yaml" }
+tree-sitter-yang = { path = "languages/tree-sitter-yang" }
+tree-sitter-zig = { path = "languages/tree-sitter-zig" }
