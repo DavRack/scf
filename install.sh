@@ -139,5 +139,5 @@ for folder in $folders; do
     cd ..
   fi
 done
-
+cd ..
 cargo install --path .

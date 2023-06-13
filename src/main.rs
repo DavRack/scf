@@ -1,3 +1,4 @@
+use std::fmt::format;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -47,7 +48,6 @@ fn main() {
     let search_files = args.files.clone();
     let now = Instant::now();
     walk_fs(&args, search_files, 0);
-    println!("exec time: {}", now.elapsed().as_millis());
 }
 
 fn walk_fs(args: &Args, files: Vec<String>, depth: u8){
@@ -115,18 +115,29 @@ fn walk_tree(file_name: &String, node: &Node, source: &[u8], kind_query: &Regex,
 }
 
 fn print_code(source_code: &[u8], node: &Node, code_query: &Regex, args: &Args){
-    let mut buf = String::new();
-    source_code.clone().read_to_string(&mut buf).unwrap();
+    let colorized_node_code = colorize_node(node, source_code, code_query);
 
-    let mut source_code_lines: Vec<String> = buf.lines().enumerate()
-        .map(|line|format!("{: <5} {}",line.0 + 1,line.1.to_string()))
+    // replace colorized into source code
+    let start_byte = node.start_byte();
+    let end_byte = node.end_byte();
+
+    let sc = source_code.clone();
+
+    let mut prefix = String::new();
+    sc[0..start_byte].to_vec().as_slice().read_to_string(&mut prefix).unwrap();
+
+    let mut sufix = String::new();
+    sc[end_byte..].to_vec().as_slice().read_to_string(&mut sufix).unwrap();
+
+    let colored_source_code = format!("{prefix}{colorized_node_code}{sufix}");
+
+    let mut source_code_lines: Vec<String> = colored_source_code.lines().enumerate()
+        .map(|line|format!("{: <4} {}",line.0 + 1,line.1.to_string()))
         .collect();
 
     let line_match = get_match_line(node, code_query, source_code);
     let mut first_line_to_print = 0; 
     let mut last_line_to_print = line_match + args.after_context + 1; 
-
-    source_code_lines[line_match] = colorize_match(source_code_lines[line_match].clone(), code_query);
 
     if line_match > args.before_context {
         first_line_to_print = line_match - args.before_context;
@@ -138,13 +149,21 @@ fn print_code(source_code: &[u8], node: &Node, code_query: &Regex, args: &Args){
 
     source_code_lines = source_code_lines[first_line_to_print..last_line_to_print].to_vec();
     let print_string = source_code_lines.join("\n");
-    println!("{}", print_string);
+    // reset the console colors
+    let reset = " ".hidden();
+    println!("{print_string}{reset}");
 }
 
-fn colorize_match(line: String, code_query: &Regex) -> String{
-    let match_text = code_query.find(&line).unwrap();
-    let colored_match = format!("{}",String::from(match_text.as_str()).red());
-    code_query.replace(&line, colored_match).to_string()
+fn colorize_match(node_code: String, code_query: &Regex) -> String{
+    let match_text = code_query.find(&node_code).unwrap();
+    let colored_match = format!("{}",String::from(match_text.as_str()).red().bold());
+    code_query.replace(&node_code, colored_match).to_string()
+}
+
+fn colorize_node(node: &Node, source_code: &[u8], code_query: &Regex) -> String{
+    let raw_node_code = node.utf8_text(source_code).unwrap().to_string();
+    let node_code = colorize_match(raw_node_code, code_query);
+    return node_code.on_bright_black().to_string();
 }
 
 fn get_match_line(node: &Node, code_query: &Regex, source_code: &[u8]) -> usize{
