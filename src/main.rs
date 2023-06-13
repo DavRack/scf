@@ -44,10 +44,8 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    println!("{:?}", args);
-    let search_files = args.files.clone();
-    let now = Instant::now();
-    walk_fs(&args, search_files, 0);
+    let files_to_search = args.files.clone();
+    walk_fs(&args, files_to_search, 0);
 }
 
 fn walk_fs(args: &Args, files: Vec<String>, depth: u8){
