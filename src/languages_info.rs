@@ -9,7 +9,10 @@ pub struct Language {
 
 }
 pub fn get_lang_for_file(file: PathBuf) -> Result<Language, &'static str> {
-    let file_extension_name = file.extension().unwrap().to_str().unwrap();
+    let file_extension_name = match file.extension(){
+        Some(file_extension) => file_extension.to_str().unwrap(),
+        None => "txt",
+    };
     let file_extension = format!(".{}", file_extension_name);
 
     let langs = get_lang_list();

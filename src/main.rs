@@ -1,8 +1,6 @@
-use std::fmt::format;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
-use std::time::Instant;
 use colored::Colorize;
 
 use regex::Regex;
@@ -14,7 +12,7 @@ use self::languages_info::get_lang_for_file;
 mod languages_info;
 
 /// Simple Key Remap
-#[derive(Clap_parser, Debug)]
+#[derive(Clap_parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// code query
@@ -22,16 +20,20 @@ struct Args {
     query: String,
 
     /// Select the tree sitter node kind
-    #[arg(long, short, name = "kind", value_name = "regex", default_value = ".*")]
-    kind: String,
+    #[arg(long, short, name = "kind", value_name = "regex")]
+    kind: Option<String>,
 
     /// Select the tree sitter node kind
     #[arg(trailing_var_arg = true, name = "files", value_name = "file names")]
-    files: Vec<String>,
+    files: Option<Vec<String>>,
 
     /// Select the tree sitter node kind
     #[arg(long, short, value_name = "NUM")]
     max_recursive_depth: Option<u8>,
+
+    /// Config file path
+    #[arg(long, short, value_name = "NUM")]
+    config_file_path: Option<String>,
 
     /// Select the tree sitter node kind
     #[arg(long, short, default_value = "5", value_name = "NUM")]
@@ -44,7 +46,11 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let files_to_search = args.files.clone();
+    // println!("{:?}", args);
+    let files_to_search = match args.files.clone(){
+        Some(files) => files,
+        None => vec![".".to_string()],
+    };
     walk_fs(&args, files_to_search, 0);
 }
 
@@ -67,15 +73,18 @@ fn walk_fs(args: &Args, files: Vec<String>, depth: u8){
                 .map(|entry| entry.unwrap().path().to_str().unwrap().to_string())
                 .collect()
             ;
-            walk_fs(&args, files_in_dir, depth+1)
+            walk_fs(args, files_in_dir, depth+1);
         }else if file_path.is_file(){
-            search_file(file_path, &args);
+            search_file(file_path, &args.clone());
         }
     }
 }
 
 fn search_file(file: PathBuf, args: &Args){
-    let lang = get_lang_for_file(file.clone()).unwrap();
+    let lang = match get_lang_for_file(file.clone()){
+        Ok(value) => value,
+        Err(_) => return,
+    };
     let language = lang.parser;
     let mut parser = Parser::new();
     parser.set_language(language).expect("cant set language for parser");
@@ -88,13 +97,17 @@ fn search_file(file: PathBuf, args: &Args){
     let tree = parser.parse(&source_code, None).unwrap();
 
     let code_query = Regex::new(&args.query).unwrap();
-    let kind_query = Regex::new(&args.kind).unwrap();
+    let kind_regex = match &args.kind {
+        Some(value) => value,
+        None => ".*",
+    };
+    let kind_query = Regex::new(kind_regex).unwrap();
 
     let file_name = String::from(file.to_str().unwrap());
-    walk_tree(&file_name, &tree.root_node(), source_code.as_bytes(), &kind_query, &code_query, args);
+    walk_tree(&file_name, &tree.root_node(), source_code.as_bytes(), &kind_query, &code_query, args, vec![]);
 }
 
-fn walk_tree(file_name: &String, node: &Node, source: &[u8], kind_query: &Regex, code_query: &Regex, args: &Args){
+fn walk_tree(file_name: &String, node: &Node, source: &[u8], kind_query: &Regex, code_query: &Regex, args: &Args, node_history: Vec<Node>){
     let mut cursor = node.walk();
 
     let node_childs = node.children(&mut cursor);
@@ -103,12 +116,16 @@ fn walk_tree(file_name: &String, node: &Node, source: &[u8], kind_query: &Regex,
         let node_code = child.utf8_text(source).unwrap();
         let node_kind = child.kind();
 
+        let mut n = node_history.clone();
+        n.push(child.clone());
+
         if kind_query.is_match(node_kind) && code_query.is_match(node_code){
             println!("{} => {}", file_name.purple(), node_kind.purple());
             print_code(source, &child, code_query, args);
+            // println!("{:?}", n);
         }
 
-        walk_tree(file_name, &child, source, kind_query, code_query, args);
+        walk_tree(file_name, &child, source, kind_query, code_query, args, n);
     }
 }
 
