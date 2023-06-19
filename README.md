@@ -1,2 +1,3 @@
-tree-sitter-cli
-git
+# Syntax-aware Code Finder
+
+![](/assets/example.gif)
