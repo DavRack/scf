@@ -12,7 +12,9 @@ cc="*"
 cc = "1.0.79"
 clap = { version = "4.3.0", features = ["derive"] }
 colored = "2.0.0"
+hcl-rs = "0.14.4"
 regex = "1.8.4"
+serde_json = "1.0.97"
 tree-sitter = "0.20.10"
 # tree-sitter-gitignore = { path = "languages/tree-sitter-gitignore" }
 # tree-sitter-llvm-mir = { path = "languages/tree-sitter-llvm-mir" }

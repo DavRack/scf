@@ -2,10 +2,12 @@ use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
 use colored::Colorize;
-
+use std::path::Path;
 use regex::Regex;
 use clap::Parser as Clap_parser;
 use tree_sitter::{Node,Parser};
+use std::fs::{create_dir};
+
 
 use self::languages_info::get_lang_for_file;
 
@@ -23,38 +25,80 @@ struct Args {
     #[arg(long, short, name = "kind", value_name = "regex")]
     kind: Option<String>,
 
-    /// Select the tree sitter node kind
+    /// Select the files to search
     #[arg(trailing_var_arg = true, name = "files", value_name = "file names")]
     files: Option<Vec<String>>,
 
-    /// Select the tree sitter node kind
-    #[arg(long, short, value_name = "NUM")]
+    /// Maximun recursive folder find depth
+    #[arg(long, short, value_name = "Int")]
     max_recursive_depth: Option<u8>,
 
     /// Config file path
-    #[arg(long, short, value_name = "NUM")]
+    #[arg(long, short, value_name = "String")]
     config_file_path: Option<String>,
 
-    /// Select the tree sitter node kind
-    #[arg(long, short, default_value = "5", value_name = "NUM")]
+    /// Before match context lines
+    #[arg(long, short, default_value = "5", value_name = "Int")]
     before_context: usize,
 
-    /// Select the tree sitter node kind
-    #[arg(long, short, default_value = "5", value_name = "NUM")]
+    /// After match context lines
+    #[arg(long, short, default_value = "5", value_name = "Int")]
     after_context: usize,
+
+    /// Show all matches (if false will show the top most node match only)
+    #[arg(long, short, default_value = "false", value_name = "Int")]
+    show_all_matches: bool,
 }
 
 fn main() {
     let args = Args::parse();
     // println!("{:?}", args);
+    let path = get_config_file_path(&args);
+    let config_file = match path {
+        Some(value) => parse_config_file(value),
+        None => serde_json::Value::Null,
+    };
     let files_to_search = match args.files.clone(){
         Some(files) => files,
         None => vec![".".to_string()],
     };
-    walk_fs(&args, files_to_search, 0);
+    walk_fs(&args, &config_file, files_to_search, 0);
 }
 
-fn walk_fs(args: &Args, files: Vec<String>, depth: u8){
+fn get_config_file_path(args: &Args) -> Option<String>{
+    return match &args.config_file_path {
+        Some(value) => Some(value.to_string()),
+        None => {
+            let home_dir_path = std::env::var("HOME").expect("can't get home path dir, the env variable 'HOME' is not set");
+            let scf_config_file_path = Path::new(&home_dir_path).join(".config/scf/config.hcl");
+            match Path::is_file(&scf_config_file_path) {
+                true => Some(scf_config_file_path.to_str().unwrap().to_string()),
+                false => None
+            }
+
+        }
+
+    };
+}
+
+fn parse_config_file(path: String) -> serde_json::Value{
+    let file_path: PathBuf = PathBuf::from(path);
+    let mut file_content_buffer = String::new();
+    let file_content = match File::open(file_path){
+        Ok(mut file) => {
+            file.read_to_string(&mut file_content_buffer).unwrap();
+            file_content_buffer
+        },
+        Err(e) => {
+            println!("Cannot open config file: {:?}", e.to_string());
+            String::from("")
+        },
+    };
+    let config: serde_json::Value = hcl::de::from_str(&file_content).unwrap();
+    return config;
+}
+
+fn walk_fs(args: &Args, config_file: &serde_json::Value, files: Vec<String>, depth: u8){
 
     let reached_max_recursive_depth = match args.max_recursive_depth {
         Some(max_depth) => depth > max_depth,
@@ -73,14 +117,14 @@ fn walk_fs(args: &Args, files: Vec<String>, depth: u8){
                 .map(|entry| entry.unwrap().path().to_str().unwrap().to_string())
                 .collect()
             ;
-            walk_fs(args, files_in_dir, depth+1);
+            walk_fs(args, config_file,files_in_dir, depth+1);
         }else if file_path.is_file(){
-            search_file(file_path, &args.clone());
+            search_file(file_path, &args.clone(), config_file);
         }
     }
 }
 
-fn search_file(file: PathBuf, args: &Args){
+fn search_file(file: PathBuf, args: &Args, config_file: &serde_json::Value){
     let lang = match get_lang_for_file(file.clone()){
         Ok(value) => value,
         Err(_) => return,
@@ -98,10 +142,20 @@ fn search_file(file: PathBuf, args: &Args){
 
     let code_query = Regex::new(&args.query).unwrap();
     let kind_regex = match &args.kind {
-        Some(value) => value,
-        None => ".*",
+        Some(value) => {
+            let config_lang_alias = &config_file["alias"][lang.name][value];
+            let config_global_alias = &config_file["alias"]["global"][value];
+            match config_lang_alias {
+                serde_json::Value::String(string) => string.to_string(),
+                _ => match config_global_alias{
+                    serde_json::Value::String(string) => string.to_string(),
+                    _ => value.to_string()
+                }
+            }
+        },
+        None => ".*".to_string(),
     };
-    let kind_query = Regex::new(kind_regex).unwrap();
+    let kind_query = Regex::new(&kind_regex).unwrap();
 
     let file_name = String::from(file.to_str().unwrap());
     walk_tree(&file_name, &tree.root_node(), source_code.as_bytes(), &kind_query, &code_query, args, vec![]);
@@ -114,19 +168,31 @@ fn walk_tree(file_name: &String, node: &Node, source: &[u8], kind_query: &Regex,
 
     for child in node_childs {
         let node_code = child.utf8_text(source).unwrap();
-        let node_kind = child.kind();
 
         let mut n = node_history.clone();
         n.push(child.clone());
+        let node_kind = get_node_kind(&n);
+        // println!("{:?}", node_kind);
 
-        if kind_query.is_match(node_kind) && code_query.is_match(node_code){
+        if kind_query.is_match(&node_kind) && code_query.is_match(node_code){
             println!("{} => {}", file_name.purple(), node_kind.purple());
             print_code(source, &child, code_query, args);
             // println!("{:?}", n);
+            if !args.show_all_matches {
+                return
+            }
         }
 
         walk_tree(file_name, &child, source, kind_query, code_query, args, n);
     }
+}
+
+fn get_node_kind(node_history: &Vec<Node>) -> String{
+    let nodes_kind: Vec<&str> = node_history
+        .iter()
+        .map(|node| node.kind())
+        .collect();
+    return nodes_kind.join("/")
 }
 
 fn print_code(source_code: &[u8], node: &Node, code_query: &Regex, args: &Args){
