@@ -210,10 +210,10 @@ fn print_code(source_code: &[u8], node: &Node, code_query: &Regex, args: &Args){
     let mut sufix = String::new();
     sc[end_byte..].to_vec().as_slice().read_to_string(&mut sufix).unwrap();
 
-    let colored_source_code = format!("{prefix}{colorized_node_code}{sufix}");
+    let colored_source_code = format!("{prefix}{colorized_node_code}{sufix}").bright_black().to_string();
 
     let mut source_code_lines: Vec<String> = colored_source_code.lines().enumerate()
-        .map(|line|format!("{: <4} {}",line.0 + 1,line.1.to_string()))
+        .map(|line|format!("{: <4} {}",(line.0+1).to_string().white(),line.1.to_string()))
         .collect();
 
     let line_match = get_match_line(node, code_query, source_code);
@@ -229,7 +229,7 @@ fn print_code(source_code: &[u8], node: &Node, code_query: &Regex, args: &Args){
     }
 
     source_code_lines = source_code_lines[first_line_to_print..last_line_to_print].to_vec();
-    let print_string = source_code_lines.join("\n");
+    let print_string = source_code_lines.join("\n").bright_black().to_string();
     // reset the console colors
     let reset = " ".hidden();
     println!("{print_string}{reset}");
@@ -244,7 +244,7 @@ fn colorize_match(node_code: String, code_query: &Regex) -> String{
 fn colorize_node(node: &Node, source_code: &[u8], code_query: &Regex) -> String{
     let raw_node_code = node.utf8_text(source_code).unwrap().to_string();
     let node_code = colorize_match(raw_node_code, code_query);
-    return node_code.on_bright_black().to_string();
+    return node_code.white().to_string();
 }
 
 fn get_match_line(node: &Node, code_query: &Regex, source_code: &[u8]) -> usize{
