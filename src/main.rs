@@ -6,7 +6,6 @@ use std::path::Path;
 use regex::Regex;
 use clap::Parser as Clap_parser;
 use tree_sitter::{Node,Parser};
-use std::fs::{create_dir};
 
 
 use self::languages_info::get_lang_for_file;
@@ -50,19 +49,24 @@ struct Args {
     show_all_matches: bool,
 }
 
-fn main() {
-    let args = Args::parse();
+#[tokio::main]
+async fn main() {
+    let args = Box::leak(Box::new(Args::parse()));
     // println!("{:?}", args);
     let path = get_config_file_path(&args);
     let config_file = match path {
         Some(value) => parse_config_file(value),
         None => serde_json::Value::Null,
     };
+    let cfn_file = Box::leak(Box::new(config_file));
     let files_to_search = match args.files.clone(){
         Some(files) => files,
         None => vec![".".to_string()],
     };
-    walk_fs(&args, &config_file, files_to_search, 0);
+    let handles = walk_fs(args, cfn_file, &files_to_search, 0);
+    for handle in handles {
+        handle.await.unwrap();
+    }
 }
 
 fn get_config_file_path(args: &Args) -> Option<String>{
@@ -98,7 +102,7 @@ fn parse_config_file(path: String) -> serde_json::Value{
     return config;
 }
 
-fn walk_fs(args: &Args, config_file: &serde_json::Value, files: Vec<String>, depth: u8){
+fn walk_fs(args: &'static Args, config_file: &'static serde_json::Value, files: &Vec<String>, depth: u8) -> Vec<tokio::task::JoinHandle<()>>{
 
     let reached_max_recursive_depth = match args.max_recursive_depth {
         Some(max_depth) => depth > max_depth,
@@ -106,8 +110,10 @@ fn walk_fs(args: &Args, config_file: &serde_json::Value, files: Vec<String>, dep
     };
 
     if reached_max_recursive_depth {
-        return
+        return vec![];
     }
+
+    let mut handles = vec![];
 
     for file in files{
         let file_path: PathBuf = PathBuf::from(file);
@@ -117,11 +123,17 @@ fn walk_fs(args: &Args, config_file: &serde_json::Value, files: Vec<String>, dep
                 .map(|entry| entry.unwrap().path().to_str().unwrap().to_string())
                 .collect()
             ;
-            walk_fs(args, config_file,files_in_dir, depth+1);
+            let mut response_handles = walk_fs(args, config_file, &files_in_dir, depth+1);
+            handles.append(&mut response_handles);
         }else if file_path.is_file(){
-            search_file(file_path, &args.clone(), config_file);
+            let a = args.clone();
+           let handle = tokio::spawn( async move {
+                search_file(file_path, &a, config_file);
+            });
+            handles.push(handle);
         }
     }
+    return handles;
 }
 
 fn search_file(file: PathBuf, args: &Args, config_file: &serde_json::Value){
@@ -176,14 +188,14 @@ fn walk_tree(file_name: &String, node: &Node, source: &[u8], kind_query: &Regex,
 
         if kind_query.is_match(&node_kind) && code_query.is_match(node_code){
             println!("{} => {}", file_name.purple(), node_kind.purple());
-            print_code(source, &child, code_query, args);
+            print_code(source, &child, code_query, args.clone());
             // println!("{:?}", n);
             if !args.show_all_matches {
                 return
             }
         }
 
-        walk_tree(file_name, &child, source, kind_query, code_query, args, n);
+        walk_tree(file_name, &child, source, kind_query, code_query, &args, n);
     }
 }
 
@@ -195,7 +207,7 @@ fn get_node_kind(node_history: &Vec<Node>) -> String{
     return nodes_kind.join("/")
 }
 
-fn print_code(source_code: &[u8], node: &Node, code_query: &Regex, args: &Args){
+fn print_code(source_code: &[u8], node: &Node, code_query: &Regex, args: Args){
     let colorized_node_code = colorize_node(node, source_code, code_query);
 
     // replace colorized into source code
@@ -213,7 +225,7 @@ fn print_code(source_code: &[u8], node: &Node, code_query: &Regex, args: &Args){
     let colored_source_code = format!("{prefix}{colorized_node_code}{sufix}").bright_black().to_string();
 
     let mut source_code_lines: Vec<String> = colored_source_code.lines().enumerate()
-        .map(|line|format!("{: <4} {}",(line.0+1).to_string().white(),line.1.to_string()))
+        .map(|line|format!("{: <4} {}",(line.0+1).to_string(),line.1.to_string()))
         .collect();
 
     let line_match = get_match_line(node, code_query, source_code);
